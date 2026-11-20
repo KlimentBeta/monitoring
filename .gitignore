@@ -1,0 +1,28 @@
+# Byte-compiled / caches
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Tests / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# PyInstaller build artifacts
+build/pyinstaller/
+build/release/
+*.spec
+
+# Local runtime data (source-run databases go to a user directory anyway)
+data/*
+!data/.gitkeep
+
+# OS files
+.DS_Store
+Thumbs.db

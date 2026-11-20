@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-title">Статистика</div>
+
+<form class="toolbar" method="get" id="statsForm">
+  <select name="site_id" onchange="this.form.submit()">
+    <option value="">Все сайты</option>
+    {% for s in sites %}
+    <option value="{{ s.id }}" {% if selected_site == s.id %}selected{% endif %}>{{ s.name }}</option>
+    {% endfor %}
+  </select>
+  <select name="period" id="periodSel">
+    {% for key, label in [('24h','Последние 24 часа'), ('7d','Последние 7 дней'), ('30d','Последние 30 дней')] %}
+    <option value="{{ key }}" {% if period == key %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+</form>
+
+<div class="cards">
+  <div class="stat-card"><div class="label">Среднее время отклика</div><div class="value" id="stAvg">{{ stats.avg_response | ms }}</div></div>
+  <div class="stat-card"><div class="label">Максимальное время</div><div class="value" id="stMax">{{ stats.max_response | ms }}</div></div>
+  <div class="stat-card"><div class="label">Минимальное время</div><div class="value" id="stMin">{{ stats.min_response | ms }}</div></div>
+  <div class="stat-card"><div class="label">Успешных проверок</div><div class="value" id="stOk">{{ stats.checks_ok }}</div><div class="sub">из {{ stats.checks_total }}</div></div>
+  <div class="stat-card"><div class="label">Неудачных проверок</div><div class="value red" id="stFail">{{ stats.checks_fail }}</div></div>
+  <div class="stat-card"><div class="label">Доступность</div><div class="value green" id="stAvail">{{ stats.availability_pct }}%</div><div class="sub">за период</div></div>
+  <div class="stat-card"><div class="label">Количество сбоев</div><div class="value" id="stInc">{{ stats.incidents }}</div></div>
+</div>
+
+<div class="card">
+  <div class="section-title" style="margin-top:0">Графики — {{ stats.site_name }} ({{ {'24h':'24 часа','7d':'7 дней','30d':'30 дней'}[period] }})</div>
+  <div class="charts-grid">
+    <div class="chart-box">
+      <div class="muted" style="margin-bottom:8px">Время отклика (мс)</div>
+      <canvas id="chartResponse"></canvas>
+    </div>
+    <div class="chart-box">
+      <div class="muted" style="margin-bottom:8px">Доступность по времени (%)</div>
+      <canvas id="chartAvailability"></canvas>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/chart.umd.js') }}"></script>
+<script>
+  var responseChart = null, availabilityChart = null;
+  var periodSel = document.getElementById('periodSel');
+
+  function drawCharts(data) {
+    var labels = data.series.labels;
+    var resp = data.series.response;
+    var avail = data.series.availability;
+
+    var respData = resp.filter(function (v) { return v !== null; });
+    if (responseChart) responseChart.destroy();
+    responseChart = new Chart(document.getElementById('chartResponse'), {
+      type: 'line',
+      data: { labels: labels, datasets: [{
+        label: 'Время отклика, мс', data: resp, borderColor: '#3b82f6',
+        backgroundColor: 'rgba(59,130,246,.12)', fill: true, tension: .3,
+        spanGaps: true, pointRadius: respData.length < 30 ? 3 : 0
+      }]},
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true } } }
+    });
+
+    if (availabilityChart) availabilityChart.destroy();
+    availabilityChart = new Chart(document.getElementById('chartAvailability'), {
+      type: 'line',
+      data: { labels: labels, datasets: [{
+        label: 'Доступность, %', data: avail, borderColor: '#2ecc71',
+        backgroundColor: 'rgba(46,204,113,.15)', fill: true, tension: .3,
+        spanGaps: true, pointRadius: avail.filter(function (v) { return v !== null; }).length < 30 ? 3 : 0
+      }]},
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+        scales: { y: { min: 0, max: 100 } } }
+    });
+  }
+
+  function loadStats() {
+    var params = new URLSearchParams();
+    var siteSel = document.querySelector('select[name="site_id"]');
+    if (siteSel && siteSel.value) params.set('site_id', siteSel.value);
+    params.set('period', periodSel.value);
+    fetch('/api/statistics?' + params.toString())
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        document.getElementById('stAvg').textContent = d.avg_response == null ? '—' : (d.avg_response >= 1000 ? (d.avg_response/1000).toFixed(2)+' с' : d.avg_response.toFixed(1)+' мс');
+        document.getElementById('stMax').textContent = d.max_response == null ? '—' : (d.max_response >= 1000 ? (d.max_response/1000).toFixed(2)+' с' : d.max_response.toFixed(1)+' мс');
+        document.getElementById('stMin').textContent = d.min_response == null ? '—' : (d.min_response >= 1000 ? (d.min_response/1000).toFixed(2)+' с' : d.min_response.toFixed(1)+' мс');
+        document.getElementById('stOk').textContent = d.checks_ok;
+        document.getElementById('stFail').textContent = d.checks_fail;
+        document.getElementById('stAvail').textContent = d.availability_pct + '%';
+        document.getElementById('stInc').textContent = d.incidents;
+        drawCharts(d);
+      }).catch(function () {});
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    drawCharts({{ stats.series | tojson | safe }});
+    periodSel.addEventListener('change', function () { loadStats(); });
+  });
+</script>
+{% endblock %}

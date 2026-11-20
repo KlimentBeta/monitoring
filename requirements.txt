@@ -1,0 +1,9 @@
+# WebsiteMonitor — зависимости приложения
+# Python 3.12
+flask>=3.0,<4
+SQLAlchemy>=2.0,<3
+requests>=2.31,<3
+PySide6>=6.6,<7
+
+# Для разработки и тестирования:
+# pip install -r requirements-dev.txt (pytest, pyinstaller, Pillow)

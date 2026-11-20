@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-title">История сбоев</div>
+
+<form class="toolbar" method="get">
+  <select name="site_id" onchange="this.form.submit()">
+    <option value="">Все сайты</option>
+    {% for s in sites %}
+    <option value="{{ s.id }}" {% if selected_site == s.id %}selected{% endif %}>{{ s.name }}</option>
+    {% endfor %}
+  </select>
+  <select name="status" onchange="this.form.submit()">
+    {% for key, label in [('all','Все инциденты'), ('open','Только открытые'), ('resolved','Только закрытые')] %}
+    <option value="{{ key }}" {% if status == key %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+</form>
+
+<div class="card">
+  {% if records %}
+  <div class="table-wrap">
+    <table class="data">
+      <thead>
+        <tr><th>Сайт</th><th>Начало сбоя</th><th>Восстановление</th><th>Продолжительность</th><th>Статус</th><th>Причина</th></tr>
+      </thead>
+      <tbody>
+        {% for inc in records %}
+        <tr>
+          <td>{{ inc.site_name }}</td>
+          <td class="muted">{{ inc.started_at | dt }}</td>
+          <td class="muted">{{ inc.resolved_at | dt }}</td>
+          <td>{{ inc.duration_seconds | dur }}</td>
+          <td>
+            {% if inc.is_resolved %}<span class="tag tag-ok">Закрыт</span>
+            {% else %}<span class="tag tag-bad">Открыт</span>{% endif %}
+          </td>
+          <td class="muted" style="max-width:320px">{{ inc.reason or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="muted" style="font-size:12px; margin-top:10px">Инцидент создаётся при переходе сайта в недоступное состояние и закрывается после восстановления.</p>
+  {% else %}
+  <div class="empty">Сбоев не зарегистрировано.</div>
+  {% endif %}
+</div>
+{% endblock %}

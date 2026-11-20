@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card" style="text-align:center">
+  <div class="page-title" style="margin-top:20px">500 — внутренняя ошибка</div>
+  <p class="muted">Произошла непредвиденная ошибка. Подробности записаны в лог.</p>
+  <a class="btn" href="{{ url_for('dashboard') }}">На главную</a>
+</div>
+{% endblock %}

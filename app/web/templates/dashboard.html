@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-title">Главная панель</div>
+
+<div class="cards">
+  <div class="stat-card">
+    <div class="label">Всего сайтов</div>
+    <div class="value">{{ overview.total }}</div>
+    <div class="sub">в мониторинге: {{ overview.active }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Доступны</div>
+    <div class="value green">{{ overview.available }}</div>
+    <div class="sub">зелёный статус</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Недоступны</div>
+    <div class="value red">{{ overview.unavailable }}</div>
+    <div class="sub">красный статус</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Среднее время отклика</div>
+    <div class="value">{{ overview.avg_response | ms }}</div>
+    <div class="sub">по истории проверок</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Зарегистрировано сбоев</div>
+    <div class="value">{{ overview.incidents }}</div>
+    <div class="sub">открытых сейчас: {{ overview.open_incidents }}</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="section-title" style="margin-top:0">Обзор сайтов</div>
+  {% if sites %}
+  <div class="table-wrap">
+    <table class="data">
+      <thead>
+        <tr>
+          <th>Название</th><th>URL</th><th>Статус</th><th>Ответ</th>
+          <th>Время отклика</th><th>Последняя проверка</th><th>Интервал</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in sites %}
+        <tr>
+          <td><a class="action" href="{{ url_for('statistics_page', site_id=s.id, period='24h') }}">{{ s.name }}</a></td>
+          <td class="muted" style="max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ s.url }}</td>
+          <td>
+            <span class="status-badge status-{{ s.current_status }}">
+              <span class="dot dot-{{ 'green' if s.current_status=='available' else ('red' if s.current_status=='unavailable' else 'gray') }}"></span>
+              {{ s.current_status | status_text }}
+            </span>
+          </td>
+          <td>{{ s.last_http_status or '—' }}{% if s.last_error and s.current_status=='unavailable' %}<div class="muted" style="font-size:12px">…{{ s.last_error }}</div>{% endif %}</td>
+          <td>{{ s.last_response_time | ms }}</td>
+          <td class="muted">{{ s.last_checked_at | dt }}</td>
+          <td>{{ s.interval_seconds }} с</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty">Сайты ещё не добавлены. <a class="action" href="{{ url_for('sites_page') }}">Добавить первый сайт</a></div>
+  {% endif %}
+</div>
+
+<div class="card">
+  <div class="section-title" style="margin-top:0">Последние события мониторинга</div>
+  {% if overview.recent_events %}
+  <div class="table-wrap">
+    <table class="data">
+      <thead>
+        <tr><th>Время</th><th>Сайт</th><th>Результат</th><th>HTTP</th><th>Время отклика</th><th>Ошибка</th></tr>
+      </thead>
+      <tbody>
+        {% for e in overview.recent_events %}
+        <tr>
+          <td class="muted">{{ e.checked_at | dt }}</td>
+          <td>{{ e.site_name }}</td>
+          <td>{% if e.is_available %}<span class="tag tag-ok">Доступен</span>{% else %}<span class="tag tag-bad">Недоступен</span>{% endif %}</td>
+          <td>{{ e.http_status or '—' }}</td>
+          <td>{{ e.response_time | ms }}</td>
+          <td class="muted" style="max-width:260px">{{ e.error_message or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty">Проверок ещё не было. <a class="action" href="{{ url_for('sites_page') }}">Перейти к мониторингу</a></div>
+  {% endif %}
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  // Автообновление главной панели каждые 10 секунд.
+  document.addEventListener('DOMContentLoaded', function () {
+    setInterval(function () {
+      fetch('/api/overview').then(function (r) { return r.json(); }).then(function (d) {
+        var v = document.querySelectorAll('.stat-card .value');
+        if (!v || v.length < 5) return;
+        v[0].textContent = d.total;
+        v[1].textContent = d.available;
+        v[2].textContent = d.unavailable;
+        v[3].textContent = d.avg_response == null ? '—' : (d.avg_response >= 1000 ? (d.avg_response/1000).toFixed(2)+' с' : d.avg_response.toFixed(1)+' мс');
+        v[4].textContent = d.incidents;
+        document.querySelector('.sub').textContent = 'в мониторинге: ' + d.active;
+      }).catch(function(){});
+    }, 10000);
+  });
+</script>
+{% endblock %}

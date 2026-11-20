@@ -1,0 +1,1 @@
+"""Service layer: high-level operations used by both interfaces."""

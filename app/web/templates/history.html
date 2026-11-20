@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-title">История проверок</div>
+
+<form class="toolbar" method="get">
+  <select name="site_id" onchange="this.form.submit()">
+    <option value="">Все сайты</option>
+    {% for s in sites %}
+    <option value="{{ s.id }}" {% if selected_site == s.id %}selected{% endif %}>{{ s.name }}</option>
+    {% endfor %}
+  </select>
+  <select name="period" onchange="this.form.submit()">
+    {% for key, label in [('24h','Последние 24 часа'), ('7d','Последние 7 дней'), ('30d','Последние 30 дней')] %}
+    <option value="{{ key }}" {% if period == key %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+</form>
+
+<div class="card">
+  {% if records %}
+  <div class="table-wrap">
+    <table class="data">
+      <thead>
+        <tr><th>Дата и время</th><th>Сайт</th><th>Результат</th><th>HTTP-код</th><th>Время отклика</th><th>Сообщение об ошибке</th></tr>
+      </thead>
+      <tbody>
+        {% for r in records %}
+        <tr>
+          <td class="muted">{{ r.checked_at | dt }}</td>
+          <td>{{ r.site_name }}</td>
+          <td>
+            {% if r.is_available %}<span class="tag tag-ok">Доступен</span>
+            {% else %}<span class="tag tag-bad">Ошибка</span>{% endif %}
+          </td>
+          <td>{{ r.http_status or '—' }}</td>
+          <td>{{ r.response_time | ms }}</td>
+          <td class="muted" style="max-width:320px">{{ r.error_message or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="muted" style="font-size:12px; margin-top:10px">Показаны последние {{ records|length }} записей. Старые записи автоматически удаляются (максимум 5000 на сайт).</p>
+  {% else %}
+  <div class="empty">За выбранный период проверок не найдено.</div>
+  {% endif %}
+</div>
+
+{% if selected_site %}
+<div class="card">
+  <div class="section-title" style="margin-top:0">Очистка истории</div>
+  <p class="muted" style="margin-bottom:12px">Полностью удалить историю проверок выбранного сайта. Действие нельзя отменить.</p>
+  <form method="post" action="{{ url_for('sites_history_clear', site_id=selected_site) }}"
+        onsubmit="return confirm('Удалить всю историю проверок?');">
+    <button class="btn btn-warn" type="submit">Очистить историю сайта</button>
+  </form>
+</div>
+{% endif %}
+{% endblock %}

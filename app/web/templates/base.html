@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title }} — Мониторинг сайтов</title>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="dot dot-green"></span>
+    <span class="brand-name">WebsiteMonitor</span>
+  </div>
+  <nav class="nav">
+    <a href="{{ url_for('dashboard') }}" class="{{ 'active' if title == 'Главная' }}">Главная</a>
+    <a href="{{ url_for('sites_page') }}" class="{{ 'active' if title == 'Мониторинг сайтов' }}">Мониторинг сайтов</a>
+    <a href="{{ url_for('history_page', site_id='', period='24h') }}" class="{{ 'active' if title == 'История проверок' }}">История проверок</a>
+    <a href="{{ url_for('incidents_page', site_id='', status='all') }}" class="{{ 'active' if title == 'История сбоев' }}">История сбоев</a>
+    <a href="{{ url_for('statistics_page', site_id='', period='24h') }}" class="{{ 'active' if title == 'Статистика' }}">Статистика</a>
+  </nav>
+</header>
+
+<main class="container">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flashes">
+        {% for category, message in messages %}
+          <div class="flash flash-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="footer">Учебный проект «Сервис мониторинга доступности веб-сайтов и API»</footer>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>
